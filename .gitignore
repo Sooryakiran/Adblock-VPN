@@ -1,0 +1,12 @@
+# Built artifacts
+build/
+.gradle/
+*.iml
+.idea/
+local.properties
+captures/
+.DS_Store
+
+# Gradle wrapper jar is intentionally not committed in this scaffold;
+# run `gradle wrapper` once to generate it.
+gradle/wrapper/gradle-wrapper.jar
