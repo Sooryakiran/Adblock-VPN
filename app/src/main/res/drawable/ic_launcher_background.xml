@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Skeuomorphic launcher background: XP/Aqua-style radial blue gradient.
+    108x108 is the adaptive-icon canvas; masked area is the inner 72x72.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path android:pathData="M0,0 H108 V108 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="36"
+                android:centerY="32"
+                android:gradientRadius="110"
+                android:startColor="#FF4A9BE0"
+                android:endColor="#FF0A246A" />
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle top-down gloss to give the background a curved-glass feel. -->
+    <path android:pathData="M0,0 H108 V54 H0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="0"
+                android:endX="54"
+                android:endY="54"
+                android:startColor="#66FFFFFF"
+                android:endColor="#00FFFFFF" />
+        </aapt:attr>
+    </path>
+</vector>

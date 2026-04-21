@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Skeuomorphic launcher foreground:
+    a glossy aqua shield with a red diagonal "no-ads" bar.
+    Drawn in the 108x108 adaptive-icon canvas; meaningful content
+    lives within the centered 66x66 safe zone.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Drop shadow under the shield. -->
+    <path
+        android:pathData="M54,24 C54,24 32,30 28,34 L28,60 C28,76 42,86 54,92 C66,86 80,76 80,60 L80,34 C76,30 54,24 54,24 Z"
+        android:fillColor="#40000000" />
+
+    <!-- Shield body with a vertical Aqua gradient (top light → bottom deep). -->
+    <path
+        android:pathData="M54,22 C54,22 32,28 28,32 L28,58 C28,74 42,84 54,90 C66,84 80,74 80,58 L80,32 C76,28 54,22 54,22 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="22"
+                android:endX="54"
+                android:endY="90"
+                android:startColor="#FFB8E2FF"
+                android:endColor="#FF003A8A" />
+        </aapt:attr>
+    </path>
+
+    <!-- Outer dark shield border. -->
+    <path
+        android:pathData="M54,22 C54,22 32,28 28,32 L28,58 C28,74 42,84 54,90 C66,84 80,74 80,58 L80,32 C76,28 54,22 54,22 Z"
+        android:strokeColor="#FF051C4A"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000" />
+
+    <!-- Upper glossy highlight (classic Aqua lozenge). -->
+    <path
+        android:pathData="M34,32 C42,27 66,27 74,32 C76,42 70,50 54,50 C38,50 32,42 34,32 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="26"
+                android:endX="54"
+                android:endY="52"
+                android:startColor="#E8FFFFFF"
+                android:endColor="#10FFFFFF" />
+        </aapt:attr>
+    </path>
+
+    <!-- Lower soft reflection on the bottom curve. -->
+    <path
+        android:pathData="M34,70 C44,82 64,82 74,70 C72,80 64,88 54,88 C44,88 36,80 34,70 Z"
+        android:fillColor="#33FFFFFF" />
+
+    <!-- Red "no" bar: a rounded rectangle rotated -30° around the shield center. -->
+    <group
+        android:name="slash"
+        android:pivotX="54"
+        android:pivotY="56"
+        android:rotation="-30">
+        <!-- bar shadow -->
+        <path
+            android:pathData="M27,54 L81,54 A4,4 0 0 1 81,62 L27,62 A4,4 0 0 1 27,54 Z"
+            android:fillColor="#66000000"
+            android:translateX="0.8"
+            android:translateY="1.2" />
+        <!-- bar body with a vertical glossy red gradient -->
+        <path
+            android:pathData="M27,52 L81,52 A4,4 0 0 1 81,60 L27,60 A4,4 0 0 1 27,52 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="54"
+                    android:startY="52"
+                    android:endX="54"
+                    android:endY="60"
+                    android:startColor="#FFFF8A6A"
+                    android:endColor="#FFA00000" />
+            </aapt:attr>
+        </path>
+        <!-- bar border -->
+        <path
+            android:pathData="M27,52 L81,52 A4,4 0 0 1 81,60 L27,60 A4,4 0 0 1 27,52 Z"
+            android:strokeColor="#FF5A0000"
+            android:strokeWidth="1"
+            android:fillColor="#00000000" />
+        <!-- thin bar highlight line -->
+        <path
+            android:pathData="M29,53.2 L79,53.2"
+            android:strokeColor="#CCFFFFFF"
+            android:strokeWidth="1" />
+    </group>
+</vector>

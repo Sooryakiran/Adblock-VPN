@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.soorkie.adblockvpn.data.DomainStat
+import com.soorkie.adblockvpn.net.PrivateDnsMode
 import com.soorkie.adblockvpn.net.PrivateDnsStatus
 import com.soorkie.adblockvpn.net.observePrivateDnsStatus
 import java.text.DateFormat
@@ -116,11 +117,47 @@ fun StatsScreen(
 private fun PrivateDnsBanner() {
     val context = LocalContext.current
     val flow = remember(context) { observePrivateDnsStatus(context) }
-    val status by flow.collectAsState(initial = PrivateDnsStatus(active = false, hostname = null))
+    val status by flow.collectAsState(
+        initial = PrivateDnsStatus(
+            mode = PrivateDnsMode.Off,
+            active = false,
+            hostname = null,
+        ),
+    )
 
-    val topColor = if (status.active) SkeuoColors.WarnBannerTop else SkeuoColors.OkBannerTop
-    val bottomColor = if (status.active) SkeuoColors.WarnBannerBottom else SkeuoColors.OkBannerBottom
-    val borderColor = if (status.active) SkeuoColors.WarnBannerBorder else SkeuoColors.OkBannerBorder
+    // "Problematic" = Private DNS will bypass our VPN's blocker.
+    // That's true whenever the user configured anything other than Off
+    // (Automatic may or may not actually upgrade, but we warn anyway since
+    // it's silent when it does).
+    val problematic = status.mode != PrivateDnsMode.Off
+
+    val topColor = if (problematic) SkeuoColors.WarnBannerTop else SkeuoColors.OkBannerTop
+    val bottomColor = if (problematic) SkeuoColors.WarnBannerBottom else SkeuoColors.OkBannerBottom
+    val borderColor = if (problematic) SkeuoColors.WarnBannerBorder else SkeuoColors.OkBannerBorder
+
+    val title = when (status.mode) {
+        PrivateDnsMode.Off -> "Private DNS: OFF"
+        PrivateDnsMode.Automatic ->
+            if (status.active) "Private DNS: AUTOMATIC (active)"
+            else "Private DNS: AUTOMATIC"
+        PrivateDnsMode.Strict -> "Private DNS: ON"
+    }
+
+    val body = when (status.mode) {
+        PrivateDnsMode.Off ->
+            "Good — DNS queries flow through this VPN and can be tracked/blocked."
+        PrivateDnsMode.Automatic -> buildString {
+            append("System may silently upgrade DNS to encrypted DoT")
+            if (status.active) append(" (currently active)")
+            append(". When it does, this VPN can't see or block those queries — ")
+            append("set Private DNS to Off for reliable blocking.")
+        }
+        PrivateDnsMode.Strict -> buildString {
+            append("DNS is sent encrypted")
+            status.hostname?.let { append(" to $it") }
+            append(". This VPN can't see or block those queries — turn Private DNS off.")
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -147,10 +184,10 @@ private fun PrivateDnsBanner() {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    SkeuoLed(on = !status.active)
+                    SkeuoLed(on = !problematic)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = if (status.active) "Private DNS: ON" else "Private DNS: OFF",
+                        text = title,
                         fontFamily = SkeuoFont,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -168,15 +205,7 @@ private fun PrivateDnsBanner() {
                 )
             }
             Text(
-                text = if (status.active) {
-                    buildString {
-                        append("DNS is sent encrypted")
-                        status.hostname?.let { append(" to $it") }
-                        append(". This VPN can't see or block those queries — turn Private DNS off.")
-                    }
-                } else {
-                    "Good — DNS queries flow through this VPN and can be tracked/blocked."
-                },
+                text = body,
                 fontFamily = SkeuoFont,
                 fontSize = 12.sp,
                 color = SkeuoColors.Text,
