@@ -55,12 +55,12 @@ object SkeuoColors {
     val PanelBorderShadow = Color(0xFF808080)
     val PanelBorderDark = Color(0xFF404040)
 
-    // Title bar – Luna blue gradient
-    val TitleBarTop = Color(0xFF0A50C8)
-    val TitleBarMid = Color(0xFF1F7AE0)
-    val TitleBarBottom = Color(0xFF0A246A)
+    // Title bar – Luna blue gradient (toned down, softer/less saturated)
+    val TitleBarTop = Color(0xFF5A7FB8)
+    val TitleBarMid = Color(0xFF6F96C9)
+    val TitleBarBottom = Color(0xFF3E5A85)
     val TitleBarText = Color(0xFFFFFFFF)
-    val TitleBarShadow = Color(0xFF000033)
+    val TitleBarShadow = Color(0xFF2A3A55)
 
     // Buttons (silver pill, Luna)
     val BtnTop = Color(0xFFFDFDFD)
