@@ -6,11 +6,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.soorkie.adblockvpn.ui.SkeuoColors
+import com.soorkie.adblockvpn.ui.SkeuoTheme
 import com.soorkie.adblockvpn.ui.StatsScreen
 import com.soorkie.adblockvpn.vpn.LocalVpnService
 
@@ -27,8 +31,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                Surface {
+            SkeuoTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize().background(SkeuoColors.Desktop),
+                    color = SkeuoColors.Desktop,
+                ) {
                     val running by LocalVpnService.isRunning.collectAsStateWithLifecycle()
                     StatsScreen(
                         isVpnRunning = running,

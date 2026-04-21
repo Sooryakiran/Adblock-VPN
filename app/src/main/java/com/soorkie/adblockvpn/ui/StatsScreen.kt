@@ -1,6 +1,7 @@
 package com.soorkie.adblockvpn.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -8,28 +9,24 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,12 +35,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.soorkie.adblockvpn.data.DomainStat
@@ -52,7 +55,6 @@ import com.soorkie.adblockvpn.net.observePrivateDnsStatus
 import java.text.DateFormat
 import java.util.Date
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
     isVpnRunning: Boolean,
@@ -62,11 +64,21 @@ fun StatsScreen(
     val vm: StatsViewModel = viewModel(factory = StatsViewModel.Factory())
     val state by vm.state.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("Adblock VPN") }) }
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SkeuoColors.Desktop),
+    ) {
+        SkeuoTitleBar(title = "Adblock VPN  —  Control Panel")
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(SkeuoColors.WindowBg)
+                .skeuoRaisedBevel()
+                .padding(8.dp),
+        ) {
             PrivateDnsBanner()
+            Spacer(Modifier.padding(top = 6.dp))
             Header(
                 isRunning = isVpnRunning,
                 totalDomains = state.totalDomains,
@@ -77,7 +89,7 @@ fun StatsScreen(
                 onStop = onStop,
                 onClear = vm::clear,
             )
-            HorizontalDivider()
+            Spacer(Modifier.padding(top = 6.dp))
             FiltersBar(
                 filter = state.filter,
                 appOptions = state.appOptions,
@@ -88,6 +100,7 @@ fun StatsScreen(
                 onBlockedFilter = vm::setBlockedFilter,
                 onClearFilters = vm::clearFilters,
             )
+            Spacer(Modifier.padding(top = 6.dp))
             StatsTable(
                 rows = state.rows,
                 blockedDomains = state.blockedDomains,
@@ -105,40 +118,54 @@ private fun PrivateDnsBanner() {
     val flow = remember(context) { observePrivateDnsStatus(context) }
     val status by flow.collectAsState(initial = PrivateDnsStatus(active = false, hostname = null))
 
-    val (container, onContainer) = if (status.active) {
-        MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
-    }
+    val topColor = if (status.active) SkeuoColors.WarnBannerTop else SkeuoColors.OkBannerTop
+    val bottomColor = if (status.active) SkeuoColors.WarnBannerBottom else SkeuoColors.OkBannerBottom
+    val borderColor = if (status.active) SkeuoColors.WarnBannerBorder else SkeuoColors.OkBannerBorder
 
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = androidx.compose.material3.CardDefaults.cardColors(
-            containerColor = container,
-            contentColor = onContainer,
-        ),
+            .drawBehind {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        0f to topColor,
+                        1f to bottomColor,
+                    ),
+                )
+                val w = size.width; val h = size.height
+                drawLine(borderColor, Offset(0f, 0.5f), Offset(w, 0.5f), strokeWidth = 1f)
+                drawLine(borderColor, Offset(0f, h - 0.5f), Offset(w, h - 0.5f), strokeWidth = 1f)
+                drawLine(borderColor, Offset(0.5f, 0f), Offset(0.5f, h), strokeWidth = 1f)
+                drawLine(borderColor, Offset(w - 0.5f, 0f), Offset(w - 0.5f, h), strokeWidth = 1f)
+            }
+            .padding(10.dp),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(
-                    text = if (status.active) "Private DNS: ON" else "Private DNS: OFF",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                TextButton(onClick = {
-                    val intent = android.content.Intent(
-                        android.provider.Settings.ACTION_WIRELESS_SETTINGS
-                    ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    runCatching { context.startActivity(intent) }
-                }) {
-                    Text("Settings")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SkeuoLed(on = !status.active)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (status.active) "Private DNS: ON" else "Private DNS: OFF",
+                        fontFamily = SkeuoFont,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = SkeuoColors.Text,
+                    )
                 }
+                SkeuoButton(
+                    text = "Settings…",
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.provider.Settings.ACTION_WIRELESS_SETTINGS
+                        ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        runCatching { context.startActivity(intent) }
+                    },
+                )
             }
             Text(
                 text = if (status.active) {
@@ -150,8 +177,10 @@ private fun PrivateDnsBanner() {
                 } else {
                     "Good — DNS queries flow through this VPN and can be tracked/blocked."
                 },
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 2.dp),
+                fontFamily = SkeuoFont,
+                fontSize = 12.sp,
+                color = SkeuoColors.Text,
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
     }
@@ -168,32 +197,81 @@ private fun Header(
     onStop: () -> Unit,
     onClear: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = if (isRunning) "VPN: running" else "VPN: stopped",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("Domains: $totalDomains")
-                Text("Requests: $totalRequests")
-                Text("Blocked: $blockedCount / $blockedRequests")
+    SkeuoPanel(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SkeuoLed(on = isRunning)
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = if (isRunning) "VPN: RUNNING" else "VPN: STOPPED",
+                    fontFamily = SkeuoFont,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (isRunning) SkeuoColors.GoBorder else SkeuoColors.StopBorder,
+                )
             }
+            Spacer(Modifier.padding(top = 8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                LcdReadout("DOMAINS", totalDomains.toString(), Modifier.weight(1f))
+                LcdReadout("REQUESTS", totalRequests.toString(), Modifier.weight(1f))
+                LcdReadout("BLOCKED", "$blockedCount / $blockedRequests", Modifier.weight(1.2f))
+            }
+            Spacer(Modifier.padding(top = 10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (isRunning) {
-                    Button(onClick = onStop) { Text("Stop VPN") }
+                    SkeuoButton(
+                        text = "■  Stop VPN",
+                        onClick = onStop,
+                        style = SkeuoButtonStyle.Stop,
+                    )
                 } else {
-                    Button(onClick = onStart) { Text("Start VPN") }
+                    SkeuoButton(
+                        text = "▶  Start VPN",
+                        onClick = onStart,
+                        style = SkeuoButtonStyle.Go,
+                    )
                 }
-                OutlinedButton(onClick = onClear) { Text("Clear stats") }
+                SkeuoButton(text = "Clear stats", onClick = onClear)
             }
+        }
+    }
+}
+
+@Composable
+private fun LcdReadout(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            fontFamily = SkeuoFont,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp,
+            color = SkeuoColors.TextMuted,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp)
+                .background(Color(0xFF0A2A10))
+                .skeuoSunkenBevel(
+                    light = Color(0xFF2A4A2A),
+                    shadow = Color(0xFF000000),
+                    dark = Color(0xFF000000),
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = value,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color(0xFF7CFF7C),
+            )
         }
     }
 }
@@ -211,49 +289,62 @@ private fun FiltersBar(
     onBlockedFilter: (BlockedFilter) -> Unit,
     onClearFilters: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MultiSelectButton(
-                modifier = Modifier.weight(1f),
-                allLabel = "All apps",
-                selected = filter.appPackages,
-                options = appOptions.map { SelectableOption(it.pkg, it.label) },
-                onConfirm = onAppFilter,
-                dialogTitle = "Filter by app",
-            )
-            MultiSelectButton(
-                modifier = Modifier.weight(1f),
-                allLabel = "All domains",
-                selected = filter.domains,
-                options = domainOptions.map { SelectableOption(it, it) },
-                onConfirm = onDomainFilter,
-                dialogTitle = "Filter by domain",
-            )
-            BlockedFilterDropdown(
-                selected = filter.blocked,
-                onSelect = onBlockedFilter,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+    SkeuoPanel(modifier = Modifier.fillMaxWidth()) {
+        Column {
             Text(
-                text = "$visibleCount shown",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "Filter",
+                fontFamily = SkeuoFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = SkeuoColors.TitleBarTop,
             )
-            val anyActive = filter.appPackages.isNotEmpty() ||
-                filter.domains.isNotEmpty() ||
-                filter.blocked != BlockedFilter.All
-            if (anyActive) {
-                TextButton(onClick = onClearFilters) {
-                    Text("Clear filters", style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.padding(top = 4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MultiSelectButton(
+                    modifier = Modifier.weight(1f),
+                    allLabel = "All apps",
+                    selected = filter.appPackages,
+                    options = appOptions.map { SelectableOption(it.pkg, it.label) },
+                    onConfirm = onAppFilter,
+                    dialogTitle = "Filter by app",
+                )
+                MultiSelectButton(
+                    modifier = Modifier.weight(1f),
+                    allLabel = "All domains",
+                    selected = filter.domains,
+                    options = domainOptions.map { SelectableOption(it, it) },
+                    onConfirm = onDomainFilter,
+                    dialogTitle = "Filter by domain",
+                )
+                BlockedFilterDropdown(
+                    selected = filter.blocked,
+                    onSelect = onBlockedFilter,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "$visibleCount shown",
+                    fontFamily = SkeuoFont,
+                    fontSize = 11.sp,
+                    color = SkeuoColors.TextMuted,
+                )
+                val anyActive = filter.appPackages.isNotEmpty() ||
+                    filter.domains.isNotEmpty() ||
+                    filter.blocked != BlockedFilter.All
+                if (anyActive) {
+                    SkeuoButton(
+                        text = "Clear filters",
+                        onClick = onClearFilters,
+                        style = SkeuoButtonStyle.Link,
+                    )
                 }
             }
         }
@@ -272,10 +363,12 @@ private fun BlockedFilterDropdown(
         BlockedFilter.Unblocked -> "Unblocked"
     }
     Box {
-        OutlinedButton(onClick = { expanded = true }) {
-            Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        SkeuoButton(text = "$label  ▾", onClick = { expanded = true })
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(SkeuoColors.WindowBg),
+        ) {
             BlockedFilter.entries.forEach { opt ->
                 DropdownMenuItem(
                     text = {
@@ -284,7 +377,9 @@ private fun BlockedFilterDropdown(
                                 BlockedFilter.All -> "All"
                                 BlockedFilter.Blocked -> "Blocked"
                                 BlockedFilter.Unblocked -> "Unblocked"
-                            }
+                            },
+                            fontFamily = SkeuoFont,
+                            color = SkeuoColors.Text,
                         )
                     },
                     onClick = {
@@ -299,7 +394,6 @@ private fun BlockedFilterDropdown(
 
 private data class SelectableOption(val value: String, val label: String)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MultiSelectButton(
     modifier: Modifier = Modifier,
@@ -317,8 +411,12 @@ private fun MultiSelectButton(
         else -> "${selected.size} selected"
     }
 
-    OutlinedButton(onClick = { open = true }, modifier = modifier) {
-        Text(buttonLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Box(modifier = modifier) {
+        SkeuoButton(
+            text = "$buttonLabel  ▾",
+            onClick = { open = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 
     if (open) {
@@ -357,63 +455,120 @@ private fun MultiSelectDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        containerColor = SkeuoColors.WindowBg,
+        titleContentColor = SkeuoColors.Text,
+        textContentColor = SkeuoColors.Text,
+        title = {
+            Text(
+                title,
+                fontFamily = SkeuoFont,
+                fontWeight = FontWeight.Bold,
+                color = SkeuoColors.Text,
+            )
+        },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("Type to filter…") },
+                    placeholder = {
+                        Text(
+                            "Type to filter…",
+                            fontFamily = SkeuoFont,
+                            color = SkeuoColors.TextMuted,
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(fontFamily = SkeuoFont, color = SkeuoColors.Text),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedTextColor = SkeuoColors.Text,
+                        unfocusedTextColor = SkeuoColors.Text,
+                        focusedIndicatorColor = SkeuoColors.TitleBarTop,
+                        unfocusedIndicatorColor = SkeuoColors.PanelBorderShadow,
+                    ),
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = { current = emptySet() }) { Text(allLabel) }
+                    SkeuoButton(
+                        text = allLabel,
+                        style = SkeuoButtonStyle.Link,
+                        onClick = { current = emptySet() },
+                    )
                     Text(
                         "${current.size} selected",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = SkeuoFont,
+                        fontSize = 11.sp,
+                        color = SkeuoColors.TextMuted,
                     )
                 }
-                HorizontalDivider()
-                LazyColumn(
+                HorizontalDivider(color = SkeuoColors.PanelBorderShadow)
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 200.dp, max = 360.dp),
+                        .padding(top = 6.dp)
+                        .background(SkeuoColors.InsetBg)
+                        .skeuoSunkenBevel(),
                 ) {
-                    items(items = filtered, key = { it.value }) { opt ->
-                        val isOn = opt.value in current
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    current = if (isOn) current - opt.value
-                                    else current + opt.value
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Checkbox(checked = isOn, onCheckedChange = null)
-                            Text(
-                                text = opt.label,
-                                modifier = Modifier.padding(start = 8.dp).weight(1f),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 200.dp, max = 360.dp)
+                            .padding(4.dp),
+                    ) {
+                        itemsIndexed(
+                            items = filtered,
+                            key = { _, o -> o.value },
+                        ) { _, opt ->
+                            val isOn = opt.value in current
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        current = if (isOn) current - opt.value
+                                        else current + opt.value
+                                    }
+                                    .padding(vertical = 3.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(
+                                    checked = isOn,
+                                    onCheckedChange = null,
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = SkeuoColors.TitleBarTop,
+                                        uncheckedColor = SkeuoColors.PanelBorderDark,
+                                        checkmarkColor = Color.White,
+                                    ),
+                                )
+                                Text(
+                                    text = opt.label,
+                                    modifier = Modifier.padding(start = 8.dp).weight(1f),
+                                    fontFamily = SkeuoFont,
+                                    fontSize = 13.sp,
+                                    color = SkeuoColors.Text,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(current) }) { Text("Apply") }
+            SkeuoButton(
+                text = "Apply",
+                style = SkeuoButtonStyle.Go,
+                onClick = { onConfirm(current) },
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            SkeuoButton(text = "Cancel", onClick = onDismiss)
         },
     )
 }
@@ -434,26 +589,37 @@ private fun StatsTable(
     onSortChange: (SortColumn) -> Unit,
     onToggleBlocked: (String, Boolean) -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        TableHeader(sort = sort, onSortChange = onSortChange)
-        HorizontalDivider()
-        if (rows.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No DNS requests yet — start the VPN and use any app.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxHeight(),
-                contentPadding = PaddingValues(vertical = 4.dp),
-            ) {
-                items(items = rows, key = { "${it.domain}\u0000${it.appPackage}" }) { row ->
-                    val isBlocked = row.domain in blockedDomains
-                    TableRow(
-                        stat = row,
-                        isBlocked = isBlocked,
-                        onToggleBlocked = { onToggleBlocked(row.domain, isBlocked) },
+    SkeuoWell(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TableHeader(sort = sort, onSortChange = onSortChange)
+            if (rows.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "No DNS requests yet — start the VPN and use any app.",
+                        fontFamily = SkeuoFont,
+                        fontSize = 13.sp,
+                        color = SkeuoColors.TextMuted,
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxHeight(),
+                    contentPadding = PaddingValues(vertical = 2.dp),
+                ) {
+                    itemsIndexed(
+                        items = rows,
+                        key = { _, r -> "${r.domain}\u0000${r.appPackage}" },
+                    ) { index, row ->
+                        val isBlocked = row.domain in blockedDomains
+                        val rowBg = if (index % 2 == 0) SkeuoColors.InsetBg else SkeuoColors.InsetAlt
+                        TableRow(
+                            stat = row,
+                            isBlocked = isBlocked,
+                            background = rowBg,
+                            onToggleBlocked = { onToggleBlocked(row.domain, isBlocked) },
+                        )
+                        HorizontalDivider(color = Color(0xFFDCE3EC))
+                    }
                 }
             }
         }
@@ -468,8 +634,13 @@ private fun TableHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .skeuoGlossy(
+                top = Color(0xFFF6F6F6),
+                mid = Color(0xFFDEDEDE),
+                bottom = Color(0xFFB8B8B8),
+            )
+            .skeuoRaisedBevel()
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HeaderCell("App", SortColumn.App, sort, onSortChange, weight = W_APP)
@@ -491,8 +662,8 @@ private fun RowScope.HeaderCell(
     val active = sort.column == column
     val arrow = when {
         !active -> ""
-        sort.descending -> "  ↓"
-        else -> "  ↑"
+        sort.descending -> "  ▼"
+        else -> "  ▲"
     }
     Text(
         text = label + arrow,
@@ -500,9 +671,10 @@ private fun RowScope.HeaderCell(
             .weight(weight)
             .clickable { onSortChange(column) }
             .padding(horizontal = 4.dp),
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontFamily = SkeuoFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 12.sp,
+        color = if (active) SkeuoColors.TitleBarTop else SkeuoColors.Text,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
@@ -512,46 +684,82 @@ private fun RowScope.HeaderCell(
 private fun TableRow(
     stat: DomainStat,
     isBlocked: Boolean,
+    background: Color,
     onToggleBlocked: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .background(if (isBlocked) Color(0xFFFFE0E0) else background)
+            .padding(horizontal = 8.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Cell(
             text = stat.appLabel,
             weight = W_APP,
-            style = MaterialTheme.typography.bodyMedium,
+            style = SkeuoTableBody,
         )
         Cell(
             text = stat.domain,
             weight = W_DOMAIN,
-            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            style = SkeuoTableBody.copy(fontFamily = FontFamily.Monospace),
         )
         Cell(
             text = stat.count.toString(),
             weight = W_COUNT,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = SkeuoTableBody.copy(fontWeight = FontWeight.Bold),
         )
         Cell(
             text = if (stat.lastSeenMs == 0L) "—" else formatTimestamp(stat.lastSeenMs),
             weight = W_LAST,
-            style = MaterialTheme.typography.bodySmall,
+            style = SkeuoTableBody.copy(fontSize = 11.sp, color = SkeuoColors.TextMuted),
         )
         Box(modifier = Modifier.weight(W_ACTION), contentAlignment = Alignment.CenterEnd) {
-            TextButton(onClick = onToggleBlocked) {
-                Text(
-                    text = if (isBlocked) "Unblock" else "Block",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (isBlocked) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error,
-                )
-            }
+            StatusToggle(isBlocked = isBlocked, onClick = onToggleBlocked)
         }
     }
 }
+
+@Composable
+private fun StatusToggle(isBlocked: Boolean, onClick: () -> Unit) {
+    // Neutral silver pill whose LED + label shows CURRENT state.
+    // Click toggles. Color communicates status, not action, so it's unambiguous.
+    val label = if (isBlocked) "Blocked" else "Allowed"
+    Box(
+        modifier = Modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(7.dp))
+            .border(
+                androidx.compose.foundation.BorderStroke(1.dp, SkeuoColors.BtnBorder),
+                androidx.compose.foundation.shape.RoundedCornerShape(7.dp),
+            )
+            .skeuoGlossy(
+                top = SkeuoColors.BtnTop,
+                mid = SkeuoColors.BtnMid,
+                bottom = SkeuoColors.BtnBottom,
+            )
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SkeuoLed(on = !isBlocked, size = 10.dp)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = label,
+                fontFamily = SkeuoFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = SkeuoColors.Text,
+            )
+        }
+    }
+}
+
+private val SkeuoTableBody = TextStyle(
+    fontFamily = SkeuoFont,
+    fontSize = 13.sp,
+    color = SkeuoColors.Text,
+)
 
 @Composable
 private fun RowScope.Cell(
