@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Adblock VPN — Local DNS sniffer & blocker for Android</title>
+    <meta name="description" content="A tiny on-device VPN that observes DNS, lets you block per-domain. No cloud, no tracking — everything stays on your phone." />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div class="desktop">
+        <div class="window">
+            <div class="title-bar">
+                <span class="title">Adblock VPN  —  About</span>
+                <span class="title-buttons">
+                    <span class="tb-btn">_</span>
+                    <span class="tb-btn">▢</span>
+                    <span class="tb-btn close">×</span>
+                </span>
+            </div>
+            <div class="window-body">
+
+                <div class="panel hero">
+                    <h1>Adblock VPN</h1>
+                    <p class="tag">A local-only Android VPN that watches DNS on your device, counts every domain, and lets you block ads/trackers per-domain. Nothing leaves your phone except the same DNS Android would have made anyway.</p>
+                    <div class="cta-row">
+                        <a class="btn btn-go" href="adblock-vpn-debug.apk" download>
+                            <span class="led led-on"></span>
+                            <span class="btn-text">▼ &nbsp;Download APK</span>
+                        </a>
+                        <a class="btn" href="https://github.com/soorkie/adblock_vpn" target="_blank" rel="noopener">View source ▾</a>
+                    </div>
+                    <p class="apk-meta" id="apk-meta">debug build · sideload only</p>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">How it works</div>
+                    <ol class="steps">
+                        <li>A tiny TUN owns <code>10.7.0.0/24</code> and registers <code>10.7.0.2</code> as the system DNS server. Only that single address is routed through the VPN — every other byte uses your normal network.</li>
+                        <li>Apps using the system resolver send DNS to <code>10.7.0.2</code>. Each query is parsed, counted by domain + app, then forwarded verbatim to <code>1.1.1.1</code>.</li>
+                        <li>You toggle <span class="pill">Allowed</span> / <span class="pill blocked">Blocked</span> per domain. Blocked queries are answered locally with <code>NXDOMAIN</code> instead of being forwarded.</li>
+                    </ol>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">Features</div>
+                    <ul class="features">
+                        <li><b>Per-app, per-domain stats</b> — see exactly which app is hammering which tracker.</li>
+                        <li><b>One-tap blocking</b> — flip a domain off, instantly synthesized NXDOMAIN.</li>
+                        <li><b>Filters &amp; sort</b> — slice by app, domain, or block state.</li>
+                        <li><b>No cloud, no telemetry</b> — Room DB on-device, queries forwarded straight to 1.1.1.1.</li>
+                        <li><b>Split tunnel</b> — only DNS goes through the TUN, so app connectivity is untouched.</li>
+                    </ul>
+                </div>
+
+                <div class="panel warn">
+                    <div class="panel-title">⚠ Heads up</div>
+                    <ul class="features">
+                        <li>Apps that use <b>DoH/DoT</b> (Chrome Secure DNS, Firefox DoH, hard-coded resolvers) bypass the system resolver — we can't see those.</li>
+                        <li>Turn off Android's <b>Private DNS</b> (Settings → Network → Private DNS → Off) for reliable blocking. The app warns you in-banner if it's on.</li>
+                        <li>IPv4 / UDP only for now.</li>
+                    </ul>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-title">Install</div>
+                    <ol class="steps">
+                        <li>Download the APK above.</li>
+                        <li>On your phone, allow installs from your browser (one-time prompt) and open the file.</li>
+                        <li>Launch the app, hit <b>▶ Start VPN</b>, accept the system VPN consent.</li>
+                        <li>Browse anything; domains will start ticking up. Tap <b>Allowed</b> on a row to flip it to <b>Blocked</b>.</li>
+                    </ol>
+                </div>
+
+                <div class="status-bar">
+                    <span>Adblock VPN · skeuomorphic edition</span>
+                    <span id="footer-meta"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Best-effort: show APK size & build date when the file is hosted alongside.
+        fetch('adblock-vpn-debug.apk', { method: 'HEAD' }).then(r => {
+            if (!r.ok) return;
+            const size = parseInt(r.headers.get('content-length') || '0', 10);
+            const lm = r.headers.get('last-modified');
+            const parts = [];
+            if (size) parts.push((size / (1024 * 1024)).toFixed(1) + ' MB');
+            if (lm) parts.push('built ' + new Date(lm).toISOString().slice(0, 10));
+            if (parts.length) {
+                document.getElementById('apk-meta').textContent = 'debug build · ' + parts.join(' · ');
+                document.getElementById('footer-meta').textContent = parts.join(' · ');
+            }
+        }).catch(() => {});
+    </script>
+</body>
+</html>

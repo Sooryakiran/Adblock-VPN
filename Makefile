@@ -10,7 +10,10 @@ ADB ?= $(ANDROID_HOME)/platform-tools/adb
 DEBUG_APK   := app/build/outputs/apk/debug/app-debug.apk
 RELEASE_APK := app/build/outputs/apk/release/app-release-unsigned.apk
 
-.PHONY: help wrapper build release run install install-release uninstall clean logcat stop
+WEB_DIR     := web
+WEB_APK     := $(WEB_DIR)/adblock-vpn-debug.apk
+
+.PHONY: help wrapper build release run install install-release uninstall clean logcat stop web web-serve
 
 help:
 	@echo "Targets:"
@@ -22,7 +25,10 @@ help:
 	@echo "  make uninstall       - uninstall app from device"
 	@echo "  make logcat          - tail logs filtered to this app"
 	@echo "  make stop            - force-stop the app on device"
+	@echo "  make web             - build APK and copy into $(WEB_DIR)/ for the landing page"
+	@echo "  make web-serve       - serve $(WEB_DIR)/ at http://localhost:8000"
 	@echo "  make clean           - gradle clean"
+
 
 wrapper:
 	gradle wrapper
@@ -54,3 +60,13 @@ logcat:
 
 clean:
 	$(GRADLE) clean
+
+web: build
+	@mkdir -p $(WEB_DIR)
+	@cp $(DEBUG_APK) $(WEB_APK)
+	@echo "APK copied to $(WEB_APK) ($$(du -h $(WEB_APK) | cut -f1))"
+	@echo "Open $(WEB_DIR)/index.html in a browser, or run: make web-serve"
+
+web-serve: web
+	@cd $(WEB_DIR) && python3 -m http.server 8000
+

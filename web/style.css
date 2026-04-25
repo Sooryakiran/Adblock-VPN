@@ -1,0 +1,279 @@
+/* Adblock VPN — landing page (XP/Luna skeuomorphic, mirrors SkeuoColors.kt) */
+:root {
+    --desktop:      #3A6EA5;
+    --window-bg:    #ECE9D8;
+    --panel-top:    #FFFFFF;
+    --panel-bottom: #D4D0C8;
+    --border-light: #FFFFFF;
+    --border-shade: #808080;
+    --border-dark:  #404040;
+
+    --tb-top:    #5A7FB8;
+    --tb-mid:    #6F96C9;
+    --tb-bottom: #3E5A85;
+    --tb-text:   #FFFFFF;
+
+    --btn-top: #FDFDFD;
+    --btn-mid: #E5E5E5;
+    --btn-bot: #B8B8B8;
+    --btn-bd:  #6B6B6B;
+
+    --go-top: #CFF2B0;
+    --go-mid: #7FCB54;
+    --go-bot: #3E8C1A;
+    --go-bd:  #255D0A;
+
+    --warn-top:    #FFE9A8;
+    --warn-bottom: #E8B440;
+    --warn-bd:     #8A5A00;
+
+    --inset:     #FFFFFF;
+    --inset-alt: #EEF3FA;
+
+    --text:       #1A1A1A;
+    --text-muted: #555555;
+    --link:       #0033AA;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    font-family: Tahoma, "Segoe UI", Verdana, sans-serif;
+    color: var(--text);
+    background: var(--desktop);
+    min-height: 100%;
+}
+
+.desktop {
+    min-height: 100vh;
+    padding: 24px 16px;
+    background:
+        radial-gradient(ellipse at 30% 30%, #6B96C9 0%, transparent 60%),
+        linear-gradient(180deg, #4F82B3 0%, #2A578F 100%);
+    background-attachment: fixed;
+}
+
+.window {
+    max-width: 880px;
+    margin: 0 auto;
+    background: var(--window-bg);
+    border: 1px solid var(--border-dark);
+    box-shadow:
+        inset 1px 1px 0 var(--border-light),
+        inset -1px -1px 0 var(--border-shade),
+        0 14px 40px rgba(0,0,0,0.45);
+    border-radius: 6px 6px 4px 4px;
+    overflow: hidden;
+}
+
+.title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px 6px 12px;
+    color: var(--tb-text);
+    font-weight: bold;
+    font-size: 13px;
+    background: linear-gradient(180deg,
+        var(--tb-top) 0%,
+        var(--tb-mid) 45%,
+        var(--tb-bottom) 100%);
+    text-shadow: 1px 1px 0 #2A3A55;
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.title-buttons { display: flex; gap: 4px; }
+
+.tb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 20px;
+    background: linear-gradient(180deg, #DDE7F4 0%, #8FAEDB 100%);
+    border: 1px solid #1F3D6B;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 11px;
+    box-shadow: inset 1px 1px 0 rgba(255,255,255,0.5);
+}
+.tb-btn.close {
+    background: linear-gradient(180deg, #F7B6A4 0%, #D24A24 100%);
+    border-color: #6E1500;
+}
+
+.window-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Skeuo panel — same as SkeuoPanel: glossy top->bottom + raised bevel */
+.panel {
+    padding: 12px;
+    border: 1px solid var(--border-dark);
+    background: linear-gradient(180deg,
+        var(--panel-top) 0%,
+        #F4F1E5 45%,
+        var(--panel-bottom) 100%);
+    box-shadow:
+        inset 1px 1px 0 var(--border-light),
+        inset -1px -1px 0 var(--border-shade);
+    border-radius: 3px;
+}
+
+.panel.warn {
+    background: linear-gradient(180deg,
+        var(--warn-top) 0%,
+        var(--warn-bottom) 100%);
+    border-color: var(--warn-bd);
+}
+
+.panel-title {
+    font-weight: bold;
+    font-size: 12px;
+    color: var(--tb-top);
+    margin-bottom: 8px;
+    letter-spacing: 0.2px;
+}
+
+.hero h1 {
+    margin: 0 0 6px 0;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    text-shadow: 1px 1px 0 #fff;
+}
+
+.hero .tag {
+    margin: 0 0 14px 0;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.45;
+    max-width: 60ch;
+}
+
+.cta-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.apk-meta {
+    margin: 10px 0 0 0;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Skeuo button — silver Luna pill */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: bold;
+    border: 1px solid var(--btn-bd);
+    border-radius: 7px;
+    background: linear-gradient(180deg,
+        var(--btn-top) 0%,
+        var(--btn-mid) 50%,
+        var(--btn-bot) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.9),
+        inset 0 -1px 0 rgba(0,0,0,0.08),
+        0 1px 0 rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: transform 0.04s ease, box-shadow 0.04s ease;
+    user-select: none;
+}
+.btn:hover { filter: brightness(1.03); }
+.btn:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.25);
+}
+
+.btn-go {
+    color: #0E2B05;
+    border-color: var(--go-bd);
+    background: linear-gradient(180deg,
+        var(--go-top) 0%,
+        var(--go-mid) 55%,
+        var(--go-bot) 100%);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+}
+
+.led {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #4a4a4a;
+    box-shadow:
+        inset 0 -1px 1px rgba(0,0,0,0.5),
+        inset 0 1px 1px rgba(255,255,255,0.4);
+}
+.led-on {
+    background: radial-gradient(circle at 30% 30%, #CFFFB4 0%, #4DD126 60%, #1B6E0A 100%);
+    box-shadow:
+        0 0 6px #6BE54B,
+        inset 0 -1px 1px rgba(0,0,0,0.4);
+}
+
+.steps, .features {
+    margin: 0;
+    padding-left: 22px;
+    line-height: 1.55;
+    font-size: 13px;
+}
+.steps li, .features li { margin-bottom: 6px; }
+
+code {
+    font-family: Consolas, "SF Mono", Menlo, monospace;
+    background: var(--inset-alt);
+    border: 1px solid #B6C4DA;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--tb-bottom);
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border: 1px solid var(--btn-bd);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    background: linear-gradient(180deg, var(--btn-top), var(--btn-bot));
+}
+.pill.blocked {
+    background: linear-gradient(180deg, #FFC8B8, #E96A4A);
+    border-color: #6E1500;
+    color: #fff;
+}
+
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: linear-gradient(180deg, #F4F1E5 0%, var(--panel-bottom) 100%);
+    border: 1px solid var(--border-dark);
+    box-shadow:
+        inset 1px 1px 0 var(--border-light),
+        inset -1px -1px 0 var(--border-shade);
+    border-radius: 3px;
+}
+
+@media (max-width: 600px) {
+    .desktop { padding: 12px 8px; }
+    .hero h1 { font-size: 22px; }
+    .hero .tag { font-size: 13px; }
+    .btn { padding: 10px 14px; }
+}

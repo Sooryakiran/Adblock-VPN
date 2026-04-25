@@ -26,6 +26,28 @@ class StatsRepository(
     /** Clears traffic stats only; the blocklist persists. */
     suspend fun clear() = statDao.clearStats()
 
+    /** Returns the current blocklist as a sorted list of domains. */
+    suspend fun snapshotBlocklist(): List<String> = blockDao.snapshot()
+
+    /**
+     * Imports [domains] into the blocklist.
+     * @param replace when true, the existing blocklist is cleared first.
+     * @return the number of domains added to the blocklist (after de-dup).
+     */
+    suspend fun importBlocklist(domains: Collection<String>, replace: Boolean): Int {
+        val now = System.currentTimeMillis()
+        val cleaned = domains
+            .asSequence()
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .map { BlockedDomain(it, now) }
+            .toList()
+        if (replace) blockDao.clearAll()
+        blockDao.insertAll(cleaned)
+        return cleaned.size
+    }
+
     companion object {
         const val UNKNOWN_PKG = "?"
         const val UNKNOWN_LABEL = "Unknown"

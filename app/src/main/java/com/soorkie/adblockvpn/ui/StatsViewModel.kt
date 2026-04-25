@@ -1,17 +1,24 @@
 package com.soorkie.adblockvpn.ui
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.soorkie.adblockvpn.MainApp
+import com.soorkie.adblockvpn.data.BlocklistFormat
 import com.soorkie.adblockvpn.data.DomainStat
 import com.soorkie.adblockvpn.data.StatsRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class SortColumn { App, Domain, Count, LastSeen }
 
@@ -27,6 +34,10 @@ data class FilterState(
 )
 
 data class AppOption(val pkg: String, val label: String)
+
+/** One-shot user-facing message emitted by the view model. */
+@JvmInline
+value class UserMessage(val text: String)
 
 data class StatsUiState(
     val rows: List<DomainStat> = emptyList(),
@@ -46,6 +57,9 @@ class StatsViewModel(private val repository: StatsRepository) : ViewModel() {
 
     private val sort = MutableStateFlow(SortState())
     private val filter = MutableStateFlow(FilterState())
+
+    private val _events = MutableSharedFlow<UserMessage>(extraBufferCapacity = 4)
+    val events: SharedFlow<UserMessage> = _events
 
     val state: StateFlow<StatsUiState> = combine(
         repository.observeStats(),
@@ -153,6 +167,53 @@ class StatsViewModel(private val repository: StatsRepository) : ViewModel() {
 
     fun clear() {
         viewModelScope.launch { repository.clear() }
+    }
+
+    /** Writes the current blocklist to [uri] as plain text (one domain per line). */
+    fun exportBlocklist(context: Context, uri: Uri) {
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            val result = runCatching {
+                val domains = repository.snapshotBlocklist()
+                val text = BlocklistFormat.export(domains)
+                withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openOutputStream(uri, "wt")?.use { os ->
+                        os.write(text.toByteArray(Charsets.UTF_8))
+                    } ?: error("Could not open file for writing")
+                }
+                domains.size
+            }
+            result.onSuccess { count ->
+                _events.tryEmit(UserMessage("Exported $count domain${if (count == 1) "" else "s"}."))
+            }.onFailure { e ->
+                _events.tryEmit(UserMessage("Export failed: ${e.message ?: "unknown error"}"))
+            }
+        }
+    }
+
+    /**
+     * Reads a plain-text blocklist from [uri] and merges (or replaces) it
+     * with the current blocklist.
+     */
+    fun importBlocklist(context: Context, uri: Uri, replace: Boolean) {
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            val result = runCatching {
+                val text = withContext(Dispatchers.IO) {
+                    appContext.contentResolver.openInputStream(uri)?.use { input ->
+                        input.bufferedReader(Charsets.UTF_8).readText()
+                    } ?: error("Could not open file for reading")
+                }
+                val domains = BlocklistFormat.parse(text)
+                repository.importBlocklist(domains, replace = replace)
+            }
+            result.onSuccess { count ->
+                val verb = if (replace) "Replaced blocklist with" else "Imported"
+                _events.tryEmit(UserMessage("$verb $count domain${if (count == 1) "" else "s"}."))
+            }.onFailure { e ->
+                _events.tryEmit(UserMessage("Import failed: ${e.message ?: "unknown error"}"))
+            }
+        }
     }
 
     private fun comparatorFor(sortState: SortState): Comparator<DomainStat> {

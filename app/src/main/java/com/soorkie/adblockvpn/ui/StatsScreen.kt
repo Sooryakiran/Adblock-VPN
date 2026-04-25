@@ -1,5 +1,8 @@
 package com.soorkie.adblockvpn.ui
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,10 +30,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +68,42 @@ fun StatsScreen(
 ) {
     val vm: StatsViewModel = viewModel(factory = StatsViewModel.Factory())
     val state by vm.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Pending import URI awaiting the user's merge/replace choice.
+    var pendingImportUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri != null) vm.exportBlocklist(context, uri)
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) pendingImportUri = uri
+    }
+
+    // Surface VM events as toasts.
+    LaunchedEffect(vm) {
+        vm.events.collect { msg ->
+            Toast.makeText(context, msg.text, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    pendingImportUri?.let { uri ->
+        ImportModeDialog(
+            onDismiss = { pendingImportUri = null },
+            onMerge = {
+                vm.importBlocklist(context, uri, replace = false)
+                pendingImportUri = null
+            },
+            onReplace = {
+                vm.importBlocklist(context, uri, replace = true)
+                pendingImportUri = null
+            },
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -71,44 +111,91 @@ fun StatsScreen(
             .background(SkeuoColors.Desktop),
     ) {
         SkeuoTitleBar(title = "Adblock VPN  —  Control Panel")
-        Column(
+        var filterExpanded by rememberSaveable { mutableStateOf(true) }
+        var sortExpanded by rememberSaveable { mutableStateOf(true) }
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(SkeuoColors.WindowBg)
                 .skeuoRaisedBevel()
-                .padding(8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            PrivateDnsBanner()
-            Spacer(Modifier.padding(top = 6.dp))
-            Header(
-                isRunning = isVpnRunning,
-                totalDomains = state.totalDomains,
-                totalRequests = state.totalRequests,
-                blockedCount = state.blockedCount,
-                blockedRequests = state.blockedRequests,
-                onStart = onStart,
-                onStop = onStop,
-                onClear = vm::clear,
-            )
-            Spacer(Modifier.padding(top = 6.dp))
-            FiltersBar(
-                filter = state.filter,
-                appOptions = state.appOptions,
-                domainOptions = state.domainOptions,
-                visibleCount = state.visibleCount,
-                onAppFilter = vm::setAppFilter,
-                onDomainFilter = vm::setDomainFilter,
-                onBlockedFilter = vm::setBlockedFilter,
-                onClearFilters = vm::clearFilters,
-            )
-            Spacer(Modifier.padding(top = 6.dp))
-            StatsTable(
-                rows = state.rows,
-                blockedDomains = state.blockedDomains,
-                sort = state.sort,
-                onSortChange = vm::toggleSort,
-                onToggleBlocked = vm::toggleBlocked,
-            )
+            item(key = "banner") { PrivateDnsBanner() }
+            item(key = "header") {
+                Header(
+                    isRunning = isVpnRunning,
+                    totalDomains = state.totalDomains,
+                    totalRequests = state.totalRequests,
+                    blockedCount = state.blockedCount,
+                    blockedRequests = state.blockedRequests,
+                    onStart = onStart,
+                    onStop = onStop,
+                    onClear = vm::clear,
+                    onExport = {
+                        exportLauncher.launch(suggestedExportName())
+                    },
+                    onImport = {
+                        importLauncher.launch(arrayOf("text/*", "application/octet-stream", "*/*"))
+                    },
+                )
+            }
+            item(key = "filters") {
+                FiltersBar(
+                    filter = state.filter,
+                    appOptions = state.appOptions,
+                    domainOptions = state.domainOptions,
+                    visibleCount = state.visibleCount,
+                    expanded = filterExpanded,
+                    onToggleExpanded = { filterExpanded = !filterExpanded },
+                    onAppFilter = vm::setAppFilter,
+                    onDomainFilter = vm::setDomainFilter,
+                    onBlockedFilter = vm::setBlockedFilter,
+                    onClearFilters = vm::clearFilters,
+                )
+            }
+            item(key = "sort") {
+                SortBar(
+                    sort = state.sort,
+                    expanded = sortExpanded,
+                    onToggleExpanded = { sortExpanded = !sortExpanded },
+                    onSortChange = vm::toggleSort,
+                )
+            }
+            if (state.rows.isEmpty()) {
+                item(key = "empty") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "No DNS requests yet — start the VPN and use any app.",
+                            fontFamily = SkeuoFont,
+                            fontSize = 13.sp,
+                            color = SkeuoColors.TextMuted,
+                        )
+                    }
+                }
+            } else {
+                itemsIndexed(
+                    items = state.rows,
+                    key = { _, r -> "${r.domain}\u0000${r.appPackage}" },
+                ) { index, row ->
+                    val isBlocked = row.domain in state.blockedDomains
+                    val rowBg = if (index % 2 == 0) SkeuoColors.InsetBg else SkeuoColors.InsetAlt
+                    Column {
+                        TableRow(
+                            stat = row,
+                            isBlocked = isBlocked,
+                            background = rowBg,
+                            onToggleBlocked = { vm.toggleBlocked(row.domain, isBlocked) },
+                        )
+                        HorizontalDivider(color = Color(0xFFDCE3EC))
+                    }
+                }
+            }
         }
     }
 }
@@ -225,6 +312,8 @@ private fun Header(
     onStart: () -> Unit,
     onStop: () -> Unit,
     onClear: () -> Unit,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
 ) {
     SkeuoPanel(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -267,6 +356,14 @@ private fun Header(
                     )
                 }
                 SkeuoButton(text = "Clear stats", onClick = onClear)
+            }
+            Spacer(Modifier.padding(top = 6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SkeuoButton(text = "Export blocklist…", onClick = onExport)
+                SkeuoButton(text = "Import blocklist…", onClick = onImport)
             }
         }
     }
@@ -313,70 +410,107 @@ private fun FiltersBar(
     appOptions: List<AppOption>,
     domainOptions: List<String>,
     visibleCount: Int,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
     onAppFilter: (Set<String>) -> Unit,
     onDomainFilter: (Set<String>) -> Unit,
     onBlockedFilter: (BlockedFilter) -> Unit,
     onClearFilters: () -> Unit,
 ) {
+    val anyActive = filter.appPackages.isNotEmpty() ||
+        filter.domains.isNotEmpty() ||
+        filter.blocked != BlockedFilter.All
     SkeuoPanel(modifier = Modifier.fillMaxWidth()) {
         Column {
+            CollapseHeader(
+                title = "Filter",
+                summary = if (anyActive) "$visibleCount shown · active" else "$visibleCount shown",
+                expanded = expanded,
+                onToggle = onToggleExpanded,
+            )
+            if (expanded) {
+                Spacer(Modifier.padding(top = 6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MultiSelectButton(
+                        modifier = Modifier.weight(1f),
+                        allLabel = "All apps",
+                        selected = filter.appPackages,
+                        options = appOptions.map { SelectableOption(it.pkg, it.label) },
+                        onConfirm = onAppFilter,
+                        dialogTitle = "Filter by app",
+                    )
+                    MultiSelectButton(
+                        modifier = Modifier.weight(1f),
+                        allLabel = "All domains",
+                        selected = filter.domains,
+                        options = domainOptions.map { SelectableOption(it, it) },
+                        onConfirm = onDomainFilter,
+                        dialogTitle = "Filter by domain",
+                    )
+                    BlockedFilterDropdown(
+                        selected = filter.blocked,
+                        onSelect = onBlockedFilter,
+                    )
+                }
+                if (anyActive) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        SkeuoButton(
+                            text = "Clear filters",
+                            onClick = onClearFilters,
+                            style = SkeuoButtonStyle.Link,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollapseHeader(
+    title: String,
+    summary: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Filter",
+                text = if (expanded) "▾" else "▸",
+                fontFamily = SkeuoFont,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = SkeuoColors.TitleBarTop,
+                modifier = Modifier.padding(end = 6.dp),
+            )
+            Text(
+                text = title,
                 fontFamily = SkeuoFont,
                 fontWeight = FontWeight.Bold,
                 fontSize = 12.sp,
                 color = SkeuoColors.TitleBarTop,
             )
-            Spacer(Modifier.padding(top = 4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                MultiSelectButton(
-                    modifier = Modifier.weight(1f),
-                    allLabel = "All apps",
-                    selected = filter.appPackages,
-                    options = appOptions.map { SelectableOption(it.pkg, it.label) },
-                    onConfirm = onAppFilter,
-                    dialogTitle = "Filter by app",
-                )
-                MultiSelectButton(
-                    modifier = Modifier.weight(1f),
-                    allLabel = "All domains",
-                    selected = filter.domains,
-                    options = domainOptions.map { SelectableOption(it, it) },
-                    onConfirm = onDomainFilter,
-                    dialogTitle = "Filter by domain",
-                )
-                BlockedFilterDropdown(
-                    selected = filter.blocked,
-                    onSelect = onBlockedFilter,
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = "$visibleCount shown",
-                    fontFamily = SkeuoFont,
-                    fontSize = 11.sp,
-                    color = SkeuoColors.TextMuted,
-                )
-                val anyActive = filter.appPackages.isNotEmpty() ||
-                    filter.domains.isNotEmpty() ||
-                    filter.blocked != BlockedFilter.All
-                if (anyActive) {
-                    SkeuoButton(
-                        text = "Clear filters",
-                        onClick = onClearFilters,
-                        style = SkeuoButtonStyle.Link,
-                    )
-                }
-            }
         }
+        Text(
+            text = summary,
+            fontFamily = SkeuoFont,
+            fontSize = 11.sp,
+            color = SkeuoColors.TextMuted,
+        )
     }
 }
 
@@ -604,51 +738,39 @@ private fun MultiSelectDialog(
 
 // --- Table -----------------------------------------------------------------
 
-private const val W_APP = 1.3f
-private const val W_DOMAIN = 2.2f
-private const val W_COUNT = 0.6f
-private const val W_LAST = 1.4f
-private const val W_ACTION = 0.9f
-
 @Composable
-private fun StatsTable(
-    rows: List<DomainStat>,
-    blockedDomains: Set<String>,
+private fun SortBar(
     sort: SortState,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
     onSortChange: (SortColumn) -> Unit,
-    onToggleBlocked: (String, Boolean) -> Unit,
 ) {
-    SkeuoWell(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            TableHeader(sort = sort, onSortChange = onSortChange)
-            if (rows.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No DNS requests yet — start the VPN and use any app.",
-                        fontFamily = SkeuoFont,
-                        fontSize = 13.sp,
-                        color = SkeuoColors.TextMuted,
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxHeight(),
-                    contentPadding = PaddingValues(vertical = 2.dp),
+    val activeLabel = when (sort.column) {
+        SortColumn.Domain -> "Domain"
+        SortColumn.Count -> "Request count"
+        SortColumn.LastSeen -> "Last seen"
+        SortColumn.App -> "App"
+    } + if (sort.descending) " ▼" else " ▲"
+    SkeuoPanel(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            CollapseHeader(
+                title = "Sort",
+                summary = activeLabel,
+                expanded = expanded,
+                onToggle = onToggleExpanded,
+            )
+            if (expanded) {
+                Spacer(Modifier.padding(top = 6.dp))
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    itemsIndexed(
-                        items = rows,
-                        key = { _, r -> "${r.domain}\u0000${r.appPackage}" },
-                    ) { index, row ->
-                        val isBlocked = row.domain in blockedDomains
-                        val rowBg = if (index % 2 == 0) SkeuoColors.InsetBg else SkeuoColors.InsetAlt
-                        TableRow(
-                            stat = row,
-                            isBlocked = isBlocked,
-                            background = rowBg,
-                            onToggleBlocked = { onToggleBlocked(row.domain, isBlocked) },
-                        )
-                        HorizontalDivider(color = Color(0xFFDCE3EC))
-                    }
+                    SortChip("Domain", SortColumn.Domain, sort, onSortChange)
+                    SortChip("Request count", SortColumn.Count, sort, onSortChange)
+                    SortChip("Last seen", SortColumn.LastSeen, sort, onSortChange)
+                    SortChip("App", SortColumn.App, sort, onSortChange)
                 }
             }
         }
@@ -656,56 +778,21 @@ private fun StatsTable(
 }
 
 @Composable
-private fun TableHeader(
-    sort: SortState,
-    onSortChange: (SortColumn) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .skeuoGlossy(
-                top = Color(0xFFF6F6F6),
-                mid = Color(0xFFDEDEDE),
-                bottom = Color(0xFFB8B8B8),
-            )
-            .skeuoRaisedBevel()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        HeaderCell("App", SortColumn.App, sort, onSortChange, weight = W_APP)
-        HeaderCell("Domain", SortColumn.Domain, sort, onSortChange, weight = W_DOMAIN)
-        HeaderCell("#", SortColumn.Count, sort, onSortChange, weight = W_COUNT)
-        HeaderCell("Last seen", SortColumn.LastSeen, sort, onSortChange, weight = W_LAST)
-        Text(text = "", modifier = Modifier.weight(W_ACTION))
-    }
-}
-
-@Composable
-private fun RowScope.HeaderCell(
+private fun SortChip(
     label: String,
     column: SortColumn,
     sort: SortState,
     onSortChange: (SortColumn) -> Unit,
-    weight: Float,
 ) {
     val active = sort.column == column
     val arrow = when {
-        !active -> ""
+        !active -> "  ▾"
         sort.descending -> "  ▼"
         else -> "  ▲"
     }
-    Text(
+    SkeuoButton(
         text = label + arrow,
-        modifier = Modifier
-            .weight(weight)
-            .clickable { onSortChange(column) }
-            .padding(horizontal = 4.dp),
-        fontFamily = SkeuoFont,
-        fontWeight = FontWeight.Bold,
-        fontSize = 12.sp,
-        color = if (active) SkeuoColors.TitleBarTop else SkeuoColors.Text,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+        onClick = { onSortChange(column) },
     )
 }
 
@@ -720,32 +807,101 @@ private fun TableRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (isBlocked) Color(0xFFFFE0E0) else background)
-            .padding(horizontal = 8.dp, vertical = 5.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Cell(
-            text = stat.appLabel,
-            weight = W_APP,
-            style = SkeuoTableBody,
-        )
-        Cell(
-            text = stat.domain,
-            weight = W_DOMAIN,
-            style = SkeuoTableBody.copy(fontFamily = FontFamily.Monospace),
-        )
-        Cell(
-            text = stat.count.toString(),
-            weight = W_COUNT,
-            style = SkeuoTableBody.copy(fontWeight = FontWeight.Bold),
-        )
-        Cell(
-            text = if (stat.lastSeenMs == 0L) "—" else formatTimestamp(stat.lastSeenMs),
-            weight = W_LAST,
-            style = SkeuoTableBody.copy(fontSize = 11.sp, color = SkeuoColors.TextMuted),
-        )
-        Box(modifier = Modifier.weight(W_ACTION), contentAlignment = Alignment.CenterEnd) {
-            StatusToggle(isBlocked = isBlocked, onClick = onToggleBlocked)
+        // Left: domain (primary) + app chip below
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(
+                text = stat.domain,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = SkeuoColors.Text,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.padding(top = 4.dp))
+            AppChip(stat.appLabel)
         }
+
+        // Middle: big count, small label, relative time underneath
+        Column(
+            modifier = Modifier.padding(end = 10.dp),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = formatCount(stat.count),
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = SkeuoColors.Text,
+                    maxLines = 1,
+                )
+                Text(
+                    text = " req",
+                    fontFamily = SkeuoFont,
+                    fontSize = 10.sp,
+                    color = SkeuoColors.TextMuted,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                )
+            }
+            Text(
+                text = if (stat.lastSeenMs == 0L) "—" else formatRelative(stat.lastSeenMs),
+                fontFamily = SkeuoFont,
+                fontSize = 11.sp,
+                color = SkeuoColors.TextMuted,
+                maxLines = 1,
+            )
+        }
+
+        StatusToggle(isBlocked = isBlocked, onClick = onToggleBlocked)
+    }
+}
+
+@Composable
+private fun AppChip(label: String) {
+    Box(
+        modifier = Modifier
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+            .background(Color(0xFFE3EAF5))
+            .border(
+                androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB6C4DA)),
+                androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    ) {
+        Text(
+            text = label,
+            fontFamily = SkeuoFont,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = SkeuoColors.TitleBarBottom,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+private fun formatCount(n: Long): String = when {
+    n < 1_000 -> n.toString()
+    n < 10_000 -> "%.1fk".format(n / 1000.0)
+    n < 1_000_000 -> "${n / 1000}k"
+    else -> "%.1fM".format(n / 1_000_000.0)
+}
+
+private fun formatRelative(ms: Long): String {
+    val diff = System.currentTimeMillis() - ms
+    if (diff < 0) return formatTimestamp(ms)
+    val sec = diff / 1000
+    return when {
+        sec < 5 -> "just now"
+        sec < 60 -> "${sec}s ago"
+        sec < 3600 -> "${sec / 60}m ago"
+        sec < 86_400 -> "${sec / 3600}h ago"
+        sec < 7 * 86_400 -> "${sec / 86_400}d ago"
+        else -> formatTimestamp(ms)
     }
 }
 
@@ -790,24 +946,61 @@ private val SkeuoTableBody = TextStyle(
     color = SkeuoColors.Text,
 )
 
-@Composable
-private fun RowScope.Cell(
-    text: String,
-    weight: Float,
-    style: TextStyle,
-) {
-    Text(
-        text = text,
-        modifier = Modifier
-            .weight(weight)
-            .padding(horizontal = 4.dp),
-        style = style,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
-
 private val DATE_FMT: DateFormat =
     DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
 
 private fun formatTimestamp(ms: Long): String = DATE_FMT.format(Date(ms))
+
+private fun suggestedExportName(): String {
+    val ts = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US)
+        .format(Date())
+    return "adblock-vpn-blocklist-$ts.txt"
+}
+
+@Composable
+private fun ImportModeDialog(
+    onDismiss: () -> Unit,
+    onMerge: () -> Unit,
+    onReplace: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = SkeuoColors.WindowBg,
+        titleContentColor = SkeuoColors.Text,
+        textContentColor = SkeuoColors.Text,
+        title = {
+            Text(
+                "Import blocklist",
+                fontFamily = SkeuoFont,
+                fontWeight = FontWeight.Bold,
+                color = SkeuoColors.Text,
+            )
+        },
+        text = {
+            Text(
+                "Merge the imported domains with your current blocklist, " +
+                    "or replace it entirely?",
+                fontFamily = SkeuoFont,
+                fontSize = 13.sp,
+                color = SkeuoColors.Text,
+            )
+        },
+        confirmButton = {
+            SkeuoButton(
+                text = "Merge",
+                style = SkeuoButtonStyle.Go,
+                onClick = onMerge,
+            )
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                SkeuoButton(
+                    text = "Replace",
+                    style = SkeuoButtonStyle.Stop,
+                    onClick = onReplace,
+                )
+                SkeuoButton(text = "Cancel", onClick = onDismiss)
+            }
+        },
+    )
+}
