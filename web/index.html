@@ -24,13 +24,13 @@
                     <h1>Adblock VPN</h1>
                     <p class="tag">A local-only Android VPN that watches DNS on your device, counts every domain, and lets you block ads/trackers per-domain. Nothing leaves your phone except the same DNS Android would have made anyway.</p>
                     <div class="cta-row">
-                        <a class="btn btn-go" href="adblock-vpn-debug.apk" download>
+                        <a class="btn btn-go" href="adblock-vpn-release.apk" download>
                             <span class="led led-on"></span>
                             <span class="btn-text">▼ &nbsp;Download APK</span>
                         </a>
-                        <a class="btn" href="https://github.com/soorkie/adblock_vpn" target="_blank" rel="noopener">View source ▾</a>
+                        <a class="btn" href="https://github.com/Sooryakiran/Adblock-VPN" target="_blank" rel="noopener">View source ▾</a>
                     </div>
-                    <p class="apk-meta" id="apk-meta">debug build · sideload only</p>
+                    <p class="apk-meta" id="apk-meta">release build · sideload only</p>
                 </div>
 
                 <div class="panel">
@@ -82,7 +82,7 @@
 
     <script>
         // Best-effort: show APK size & build date when the file is hosted alongside.
-        fetch('adblock-vpn-debug.apk', { method: 'HEAD' }).then(r => {
+        fetch('adblock-vpn-release.apk', { method: 'HEAD' }).then(r => {
             if (!r.ok) return;
             const size = parseInt(r.headers.get('content-length') || '0', 10);
             const lm = r.headers.get('last-modified');

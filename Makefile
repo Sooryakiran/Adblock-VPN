@@ -8,10 +8,10 @@ ACTIVITY := $(APP_ID)/.MainActivity
 ADB ?= $(ANDROID_HOME)/platform-tools/adb
 
 DEBUG_APK   := app/build/outputs/apk/debug/app-debug.apk
-RELEASE_APK := app/build/outputs/apk/release/app-release-unsigned.apk
+RELEASE_APK := app/build/outputs/apk/release/app-release.apk
 
 WEB_DIR     := web
-WEB_APK     := $(WEB_DIR)/adblock-vpn-debug.apk
+WEB_APK     := $(WEB_DIR)/adblock-vpn-release.apk
 
 .PHONY: help wrapper build release run install install-release uninstall clean logcat stop web web-serve
 
@@ -38,7 +38,7 @@ build:
 
 release:
 	$(GRADLE) :app:assembleRelease
-	@echo "Unsigned release APK: $(RELEASE_APK)"
+	@echo "Release APK: $(RELEASE_APK)"
 
 install: build
 	$(ADB) install -r -t "$(DEBUG_APK)"
@@ -61,9 +61,9 @@ logcat:
 clean:
 	$(GRADLE) clean
 
-web: build
+web: release
 	@mkdir -p $(WEB_DIR)
-	@cp $(DEBUG_APK) $(WEB_APK)
+	@cp $(RELEASE_APK) $(WEB_APK)
 	@echo "APK copied to $(WEB_APK) ($$(du -h $(WEB_APK) | cut -f1))"
 	@echo "Open $(WEB_DIR)/index.html in a browser, or run: make web-serve"
 

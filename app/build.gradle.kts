@@ -21,6 +21,9 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Sign release builds with the debug keystore so the APK published
+            // on the landing page is installable without a release keystore.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
